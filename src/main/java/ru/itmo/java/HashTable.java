@@ -16,6 +16,7 @@ public class HashTable {
         this.m_array = new Entry[capacity];
         this.m_loadFactor = loadFactor;
     }
+
     public HashTable(int capacity) {
         this.m_capacity = capacity;
         this.m_array = new Entry[capacity];
@@ -24,18 +25,20 @@ public class HashTable {
     public Object put(Object key, Object value) {
         if (get(key) == null) {
             ++m_keysNum;
-            if ((double)m_keysNum / (double)m_capacity > m_loadFactor) {
+            if ((double) m_keysNum / (double) m_capacity - m_loadFactor > 1e-5) {
                 resize();
             }
             Entry newEntry = new Entry(key, value);
             int index = getHash(key);
-            for (; m_array[index] != null; index = (index + 1) % m_capacity) {}
+            for (; m_array[index] != null; index = (index + 1) % m_capacity) {
+            }
             m_array[index] = newEntry;
             return null;
         }
 
         int index = getHash(key);
-        for (; m_array[index] == null || !key.equals(m_array[index].getKey()); index = (index + 1) % m_capacity) {}
+        for (; m_array[index] == null || !key.equals(m_array[index].getKey()); index = (index + 1) % m_capacity) {
+        }
         Object lastValue = m_array[index].getValue();
         m_array[index].setValue(value);
         return lastValue;
@@ -66,9 +69,10 @@ public class HashTable {
             --m_keysNum;
             return value;
         }
-        do {
-            index = (index + 1) % m_capacity;
-        } while ((m_array[index] == null || !key.equals(m_array[index].getKey())) && index != hash);
+        for (index = (index + 1) % m_capacity;
+             (m_array[index] == null || !key.equals(m_array[index].getKey())) && index != hash;
+             index = (index + 1) % m_capacity)
+            ;
 
         if (index == hash) {
             return null;
@@ -86,6 +90,7 @@ public class HashTable {
     private int getHash(Object key) {
         return abs(key.hashCode() % m_capacity);
     }
+
     private void resize() {
         m_capacity *= 2;
         Entry[] newArray = new Entry[m_capacity];
@@ -95,7 +100,8 @@ public class HashTable {
                 continue;
             }
             int index = getHash(entry.getKey());
-            for (; newArray[index] != null; index = (index + 1) % m_capacity) {}
+            for (; newArray[index] != null; index = (index + 1) % m_capacity) {
+            }
             newArray[index] = entry;
         }
 
@@ -114,7 +120,11 @@ public class HashTable {
         public void setValue(Object newValue) {
             this.m_value = newValue;
         }
-        public Object getKey()   { return this.m_key; }
+
+        public Object getKey() {
+            return this.m_key;
+        }
+
         public Object getValue() {
             return this.m_value;
         }
