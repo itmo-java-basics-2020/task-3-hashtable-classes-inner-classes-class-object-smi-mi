@@ -13,7 +13,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 public class HashTableTest {
-    private static final int NUMBER_OF_INVOCATIONS = 1_000_0;
+    private static final int NUMBER_OF_INVOCATIONS = 1_000_000;
 
     private final Random random = new Random();
     private final Supplier<Integer> defaultIntValuesSupplier = () -> random.nextInt(1_000_000);
