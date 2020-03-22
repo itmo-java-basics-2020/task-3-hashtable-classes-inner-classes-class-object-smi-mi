@@ -6,127 +6,133 @@ import java.util.Objects;
 import static java.lang.Math.abs;
 
 public class HashTable {
-    private Entry[] m_array;
-    private int m_keysNum = 0;
-    private int m_capacity;
-    private double m_loadFactor = 0.5;
+    private static final int STEP = 701;
+    private Entry[] table;
+    private int keysNum = 0;
+    private int removedKeysNum = 0;
+    private int capacity;
+    private double loadFactor = 0.5;
 
     public HashTable(int capacity, double loadFactor) {
-        this.m_capacity = capacity;
-        this.m_array = new Entry[capacity];
-        this.m_loadFactor = loadFactor;
+        this.capacity = capacity;
+        this.table = new Entry[capacity];
+        this.loadFactor = loadFactor;
     }
 
     public HashTable(int capacity) {
-        this.m_capacity = capacity;
-        this.m_array = new Entry[capacity];
+        this.capacity = capacity;
+        this.table = new Entry[capacity];
     }
 
     public Object put(Object key, Object value) {
-        if (get(key) == null) {
-            ++m_keysNum;
-            if ((double) m_keysNum / (double) m_capacity - m_loadFactor > 1e-5) {
-                resize();
-            }
-            Entry newEntry = new Entry(key, value);
-            int index = getHash(key);
-            for (; m_array[index] != null; index = (index + 1) % m_capacity) {
-            }
-            m_array[index] = newEntry;
-            return null;
+        int index = getHash(key);
+        for (; table[index] != null && !key.equals(table[index].key); index = getNextIndex(index)) {
         }
 
-        int index = getHash(key);
-        for (; m_array[index] == null || !key.equals(m_array[index].getKey()); index = (index + 1) % m_capacity) {
+        if (table[index] != null) {
+            Object lastValue = table[index].value;
+            table[index].value = value;
+            return lastValue;
         }
-        Object lastValue = m_array[index].getValue();
-        m_array[index].setValue(value);
-        return lastValue;
+
+        Entry newEntry = new Entry(key, value);
+        table[index] = newEntry;
+
+        ++keysNum;
+        if ((double) (keysNum + removedKeysNum) / (double) capacity - loadFactor > 1e-5) {
+            removedKeysNum = 0;
+            resize(1);
+        }
+        if ((double) keysNum / (double) capacity - loadFactor > 1e-5) {
+            removedKeysNum = 0;
+            resize(2);
+        }
+
+        return null;
     }
 
     public Object get(Object key) {
         int hash = getHash(key);
         int index = hash;
-        if (m_array[index] != null && key.equals(m_array[index].getKey())) {
-            return m_array[index].getValue();
+        if (table[index] != null && key.equals(table[index].key)) {
+            return table[index].value;
         }
+
         do {
-            index = (index + 1) % m_capacity;
-        } while ((m_array[index] == null || !key.equals(m_array[index].getKey())) && index != hash);
+            index = getNextIndex(index);
+        } while ((table[index] == null || !key.equals(table[index].key)) && index != hash);
 
         if (index == hash) {
             return null;
         }
-        return m_array[index].getValue();
+        return table[index].value;
     }
 
     public Object remove(Object key) {
         int hash = getHash(key);
         int index = hash;
-        if (m_array[index] != null && key.equals(m_array[index].getKey())) {
-            Object value = m_array[index].getValue();
-            m_array[index] = null;
-            --m_keysNum;
+        if (table[index] != null && key.equals(table[index].key)) {
+            Object value = table[index].value;
+            table[index] = new Entry();
+            --keysNum;
+            ++removedKeysNum;
             return value;
         }
-        for (index = (index + 1) % m_capacity;
-             (m_array[index] == null || !key.equals(m_array[index].getKey())) && index != hash;
-             index = (index + 1) % m_capacity)
-            ;
 
-        if (index == hash) {
+        for (index = getNextIndex(index);
+             table[index] != null && !key.equals(table[index].key) && index != hash;
+             index = getNextIndex(index)) {}
+
+        if (index == hash || table[index] == null) {
             return null;
         }
-        Object value = m_array[index].getValue();
-        m_array[index] = null;
-        --m_keysNum;
+        Object value = table[index].value;
+        table[index] = new Entry();
+        --keysNum;
+        ++removedKeysNum;
         return value;
     }
 
     public int size() {
-        return m_keysNum;
+        return this.keysNum;
     }
 
     private int getHash(Object key) {
-        return abs(key.hashCode() % m_capacity);
+        return abs(key.hashCode() % capacity);
     }
 
-    private void resize() {
-        m_capacity *= 2;
-        Entry[] newArray = new Entry[m_capacity];
+    private void resize(int resizeFactor) {
+        capacity *= resizeFactor;
+        Entry[] newArray = new Entry[capacity];
 
-        for (Entry entry : m_array) {
-            if (entry == null) {
+        for (Entry entry : table) {
+            if (entry == null || entry.key == null) {
                 continue;
             }
-            int index = getHash(entry.getKey());
-            for (; newArray[index] != null; index = (index + 1) % m_capacity) {
+            int index = getHash(entry.key);
+            for (; newArray[index] != null; index = getNextIndex(index)) {
             }
             newArray[index] = entry;
         }
 
-        m_array = newArray;
+        table = newArray;
+    }
+
+    private int getNextIndex(int index) {
+        return (index + STEP) % capacity;
     }
 
     private static class Entry {
-        private Object m_key;
-        private Object m_value;
+        private Object key;
+        private Object value;
 
+        public Entry() {
+            this.key   = null;
+            this.value = null;
+        }
         public Entry(Object key, Object value) {
-            this.m_key = key;
-            this.m_value = value;
-        }
-
-        public void setValue(Object newValue) {
-            this.m_value = newValue;
-        }
-
-        public Object getKey() {
-            return this.m_key;
-        }
-
-        public Object getValue() {
-            return this.m_value;
+            this.key   = key;
+            this.value = value;
         }
     }
 }
