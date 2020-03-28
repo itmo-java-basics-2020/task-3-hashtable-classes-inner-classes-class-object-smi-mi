@@ -1,8 +1,5 @@
 package ru.itmo.java;
 
-import java.util.Map;
-import java.util.Objects;
-
 import static java.lang.Math.abs;
 
 public class HashTable {
@@ -60,9 +57,9 @@ public class HashTable {
 
         do {
             index = getNextIndex(index);
-        } while ((table[index] == null || !key.equals(table[index].key)) && index != hash);
+        } while (table[index] != null && !key.equals(table[index].key) && index != hash);
 
-        if (index == hash) {
+        if (index == hash || table[index] == null) {
             return null;
         }
         return table[index].value;
@@ -81,7 +78,8 @@ public class HashTable {
 
         for (index = getNextIndex(index);
              table[index] != null && !key.equals(table[index].key) && index != hash;
-             index = getNextIndex(index)) {}
+             index = getNextIndex(index)) {
+        }
 
         if (index == hash || table[index] == null) {
             return null;
@@ -101,6 +99,10 @@ public class HashTable {
         return abs(key.hashCode() % capacity);
     }
 
+    private int getNextIndex(int index) {
+        return (index + STEP) % capacity;
+    }
+
     private void resize(int resizeFactor) {
         capacity *= resizeFactor;
         Entry[] newArray = new Entry[capacity];
@@ -118,20 +120,17 @@ public class HashTable {
         table = newArray;
     }
 
-    private int getNextIndex(int index) {
-        return (index + STEP) % capacity;
-    }
-
     private static class Entry {
         private Object key;
         private Object value;
 
         public Entry() {
-            this.key   = null;
+            this.key = null;
             this.value = null;
         }
+
         public Entry(Object key, Object value) {
-            this.key   = key;
+            this.key = key;
             this.value = value;
         }
     }
