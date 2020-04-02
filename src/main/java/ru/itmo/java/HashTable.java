@@ -24,10 +24,7 @@ public class HashTable {
     }
 
     public Object put(Object key, Object value) {
-        if ((double)(keysNum + removedKeysNum) / capacity - loadFactor > EPSILON) {
-            resize();
-        }
-
+        checkAndResizeIfNeeded();
         int index = findIndex(key);
         if (table[index] == null) {
             table[index] = new Entry(key, value);
@@ -82,10 +79,19 @@ public class HashTable {
         return (index + STEP) % capacity;
     }
 
-    private void resize() {
+    private void checkAndResizeIfNeeded() {
+        if ((double) (keysNum + removedKeysNum) / (double) capacity - loadFactor > EPSILON) {
+            resize(1);
+        }
+        if ((double) (keysNum) / (double) capacity - loadFactor > EPSILON) {
+            resize(RESIZE_FACTOR);
+        }
+    }
+
+    private void resize(int resizeFactor) {
         Entry[] oldTable = table;
 
-        capacity *= RESIZE_FACTOR;
+        capacity *= resizeFactor;
         table = new Entry[capacity];
         keysNum = 0;
         removedKeysNum = 0;
