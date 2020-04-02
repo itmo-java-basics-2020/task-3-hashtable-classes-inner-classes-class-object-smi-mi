@@ -4,11 +4,14 @@ import static java.lang.Math.abs;
 
 public class HashTable {
     private static final int STEP = 701;
+    private static final double DEFAULT_LOAD_FACTOR = 0.5;
+    private static final int RESIZE_FACTOR = 2;
+    private static final double EPSILON = 1e-5;
     private Entry[] table;
     private int keysNum = 0;
     private int removedKeysNum = 0;
     private int capacity;
-    private double loadFactor = 0.5;
+    private double loadFactor;
 
     public HashTable(int capacity, double loadFactor) {
         this.capacity = capacity;
@@ -17,85 +20,61 @@ public class HashTable {
     }
 
     public HashTable(int capacity) {
-        this.capacity = capacity;
-        this.table = new Entry[capacity];
+        this(capacity, DEFAULT_LOAD_FACTOR);
     }
 
     public Object put(Object key, Object value) {
-        int index = getHash(key);
-        for (; table[index] != null && !key.equals(table[index].key); index = getNextIndex(index)) {
+        if ((double)(keysNum + removedKeysNum) / capacity - loadFactor > EPSILON) {
+            resize();
         }
 
-        if (table[index] != null) {
-            Object lastValue = table[index].value;
-            table[index].value = value;
-            return lastValue;
+        int index = findIndex(key);
+        if (table[index] == null) {
+            table[index] = new Entry(key, value);
+            ++keysNum;
+            return null;
         }
-
-        Entry newEntry = new Entry(key, value);
-        table[index] = newEntry;
-
-        ++keysNum;
-        if ((double) (keysNum + removedKeysNum) / (double) capacity - loadFactor > 1e-5) {
-            removedKeysNum = 0;
-            resize(1);
-        }
-        if ((double) keysNum / (double) capacity - loadFactor > 1e-5) {
-            removedKeysNum = 0;
-            resize(2);
-        }
-
-        return null;
+        Object lastValue = table[index].value;
+        table[index].value = value;
+        return lastValue;
     }
 
     public Object get(Object key) {
-        int hash = getHash(key);
-        int index = hash;
-        if (table[index] != null && key.equals(table[index].key)) {
-            return table[index].value;
-        }
-
-        do {
-            index = getNextIndex(index);
-        } while (table[index] != null && !key.equals(table[index].key) && index != hash);
-
-        if (index == hash || table[index] == null) {
+        int index = findIndex(key);
+        if (table[index] == null) {
             return null;
         }
         return table[index].value;
     }
 
     public Object remove(Object key) {
-        int hash = getHash(key);
-        int index = hash;
-        if (table[index] != null && key.equals(table[index].key)) {
-            Object value = table[index].value;
-            table[index] = new Entry();
-            --keysNum;
-            ++removedKeysNum;
-            return value;
-        }
-
-        for (index = getNextIndex(index);
-             table[index] != null && !key.equals(table[index].key) && index != hash;
-             index = getNextIndex(index)) {
-        }
-
-        if (index == hash || table[index] == null) {
+        int index = findIndex(key);
+        if (table[index] == null) {
             return null;
         }
-        Object value = table[index].value;
+        Object lastValue = table[index].value;
         table[index] = new Entry();
         --keysNum;
         ++removedKeysNum;
-        return value;
+        return lastValue;
     }
 
     public int size() {
         return this.keysNum;
     }
 
-    private int getHash(Object key) {
+    private int findIndex(Object key) {
+        int index = getInitIndex(key);
+        while (table[index] != null) {
+            if (key.equals(table[index].key)) {
+                return index;
+            }
+            index = getNextIndex(index);
+        }
+        return index;
+    }
+
+    private int getInitIndex(Object key) {
         return abs(key.hashCode() % capacity);
     }
 
@@ -103,21 +82,19 @@ public class HashTable {
         return (index + STEP) % capacity;
     }
 
-    private void resize(int resizeFactor) {
-        capacity *= resizeFactor;
-        Entry[] newArray = new Entry[capacity];
+    private void resize() {
+        Entry[] oldTable = table;
 
-        for (Entry entry : table) {
-            if (entry == null || entry.key == null) {
-                continue;
+        capacity *= RESIZE_FACTOR;
+        table = new Entry[capacity];
+        keysNum = 0;
+        removedKeysNum = 0;
+
+        for (Entry entry : oldTable) {
+            if (entry != null && entry.key != null) {
+                put(entry.key, entry.value);
             }
-            int index = getHash(entry.key);
-            for (; newArray[index] != null; index = getNextIndex(index)) {
-            }
-            newArray[index] = entry;
         }
-
-        table = newArray;
     }
 
     private static class Entry {
